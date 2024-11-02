@@ -3,7 +3,7 @@ name: CI for Java app
 on:
   workflow_call:
     inputs:
-      repository_name:
+      epoName:
         required: true
         type: string
     secrets:
