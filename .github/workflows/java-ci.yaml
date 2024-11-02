@@ -7,8 +7,10 @@ on:
         required: true
         type: string
     secrets:
-      GIT_TOKEN:
+      DOCKER_USERNAME:
         required: false
+      DOCKER_PASSWORD:
+        required: true
 
 jobs:
   build:
