@@ -6,6 +6,12 @@ on:
       repoName:
         required: true
         type: string
+      version:
+        required: true
+        type: string
+      distribution:
+        required: true
+        type: string
     secrets:
       DOCKER_USERNAME:
         required: false
@@ -23,8 +29,8 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
-          java-version: '17'
-          distribution: 'adopt'
+          java-version: ${{ inputs.version }}
+          distribution: ${{ inputs.distribution }}
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
