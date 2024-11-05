@@ -1,10 +1,20 @@
 name: Code Quality and Security Analysis
 
 on:
-  pull_request:
-  push:
-    branches:
-      - master
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      language:
+        required: true
+        type: string
+      distribution:
+        required: true
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: true
 
 jobs:
   analyze:
@@ -21,8 +31,8 @@ jobs:
         if: matrix.tool == 'sonarcloud'
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
-          distribution: 'adopt'
+          java-version: ${{ input.version }}
+          distribution: ${{ inputs.distribution }}
           
       - name: Verify Java Version
         if: matrix.tool == 'sonarcloud'
