@@ -63,6 +63,9 @@ jobs:
       #     push: false
       #     tags: gradle-image:latest
       #    # tags: ${{ vars.DOCKERHUB_USERNAME }}/clockbox:latest
+      - name: Build and push Docker image
+        run: |
+          docker run -p 8080:80 gradle-example-app 
         
       - name: Run the application
         run: java -jar build/libs/gradle-example-all.jar
