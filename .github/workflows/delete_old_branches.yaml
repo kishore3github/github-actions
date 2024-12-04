@@ -1,0 +1,78 @@
+name: Delete Old Branches
+
+on:
+  schedule:
+    - cron: "0 0 * * *"  # Runs daily at midnight
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    env:  # Define global environment variables here
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BASE_URL: "https://github.com/kishore3github/gradle-example"  # Replace with your repository
+
+    steps:
+      - name: Debug API Response
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$BASE_URL/branches")
+          echo "Response from API:"
+          echo "$RESPONSE"
+
+      - name: Set up environment
+        run: |
+          CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          # Fetch all branches and store them in a JSON file
+          curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_TOKEN" "$BASE_URL/branches?per_page=100&page=1" > branches.json
+
+          echo "Printing branches from JSON file"
+          cat branches.json
+
+          > old-branch.txt
+
+          cat branches.json | jq -r '.[].name' | while read BRANCH; do
+              if echo "$BRANCH" | grep -qE "^(develop|master|release/.*)$"; then
+                  echo "Skipping protected branch: $BRANCH"
+                  continue
+              fi
+
+              COMMIT_DETAILS=$(curl -s -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_TOKEN" "$BASE_URL/commits?sha=$BRANCH")
+
+              if echo "$COMMIT_DETAILS" | jq empty 2>/dev/null; then
+                  LAST_COMMIT_DATE=$(echo "$COMMIT_DETAILS" | jq -r '.[0].commit.committer.date')
+
+                  if [[ -n "$LAST_COMMIT_DATE" ]]; then
+                      BRANCH_TIMESTAMP=$(date -d "$LAST_COMMIT_DATE" +%s)
+                      CURRENT_TIMESTAMP=$(date -u +%s)
+
+                      DIFF_MONTHS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 2592000 ))
+
+                      if [[ $DIFF_MONTHS -ge 6 ]]; then
+                          echo "Branch: $BRANCH, Last Modified: $LAST_COMMIT_DATE is older than 6 months" >> old-branch.txt
+                      fi
+                  else
+                      echo "Branch: $BRANCH, No commit date found"
+                  fi
+              else
+                  echo "Branch: $BRANCH, Invalid JSON or API error: $COMMIT_DETAILS"
+              fi
+          done
+
+      - name: Print old branches
+        run: |
+          echo "Old branches (older than 6 months):"
+          cat old-branch.txt
+
+      - name: Delete old branches
+        run: |
+            while read BRANCH; do
+                echo "Deleting branch: $BRANCH"
+                RESPONSE=$(curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" "$BASE_URL/git/refs/heads/$BRANCH")
+                if [[ "$RESPONSE" == "" ]]; then
+                    echo "Branch $BRANCH deleted successfully."
+                else
+                    echo "Failed to delete branch $BRANCH: $RESPONSE"
+                fi
+            done < old-branch.txt
