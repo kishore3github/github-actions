@@ -47,7 +47,8 @@ jobs:
                       BRANCH_TIMESTAMP=$(date -d "$LAST_COMMIT_DATE" +%s)
                       CURRENT_TIMESTAMP=$(date -u +%s)
 
-                      DIFF_MONTHS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 2592000 ))
+                      # DIFF_MONTHS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 2592000 ))
+                      DIFF_DAYS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 86400 ))
 
                       if [[ $DIFF_MONTHS -ge 6 ]]; then
                           echo "Branch: $BRANCH, Last Modified: $LAST_COMMIT_DATE is older than 6 months" >> old-branch.txt
