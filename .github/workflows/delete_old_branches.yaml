@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:  # Define global environment variables here
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       BASE_URL: "https://github.com/kishore3github/gradle-example"  # Replace with your repository
 
     steps:
@@ -48,7 +48,7 @@ jobs:
                       CURRENT_TIMESTAMP=$(date -u +%s)
 
                       # DIFF_MONTHS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 2592000 ))
-                      DIFF_DAYS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 86400 ))
+                      DIFF_DAYS=$(( (CURRENT_TIMESTAMP - BRANCH_TIMESTAMP) / 4400 ))
 
                       if [[ $DIFF_MONTHS -ge 6 ]]; then
                           echo "Branch: $BRANCH, Last Modified: $LAST_COMMIT_DATE is older than 6 months" >> old-branch.txt
