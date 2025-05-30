@@ -103,7 +103,7 @@ jobs:
             echo "Looking for workflow runs after: $DISPATCH_TIME
 
       
-            echo "Looking for workflow run after $DISPATCH_TIME"
+            # echo "Looking for workflow run after $DISPATCH_TIME"
       
             for attempt in {1..20}; do
               RUNS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
