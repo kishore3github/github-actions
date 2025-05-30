@@ -64,7 +64,11 @@ jobs:
           
             sleep 5
           done < workflow-inputs.txt
-
+      - name: cat trigger
+        run: |
+          ls 
+          cat triggered.txt
+          
 
       - name: Wait for specific workflow to complete
         run: |
