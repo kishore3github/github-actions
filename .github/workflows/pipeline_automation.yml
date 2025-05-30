@@ -36,11 +36,11 @@ jobs:
 
       - name: Trigger workflows from file
         run: |
+         echo "workflow_file,trigger_id" > triggered.txt
           while IFS= read -r line; do
-            echo "Processing: $line"
-            WORKFLOW_FILE=$(echo "$line" | awk '{print $1}')
+            WORKFLOW_FILE=$(echo "$line" | awk '{print $1}' | tr -d '"')
             INPUTS=$(echo "$line" | cut -d' ' -f2-)
-
+          
             JSON_INPUTS="{"
             for pair in $INPUTS; do
               KEY=$(echo $pair | cut -d'=' -f1)
@@ -49,10 +49,10 @@ jobs:
             done
             JSON_INPUTS=${JSON_INPUTS%,}
             JSON_INPUTS+="}"
-
+          
             TRIGGER_ID="trigger-$(date +%s%N)"
-            echo "Triggering $WORKFLOW_FILE with inputs: $JSON_INPUTS"
-
+            echo "$WORKFLOW_FILE,$TRIGGER_ID" >> triggered.txt
+          
             curl -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
@@ -61,50 +61,49 @@ jobs:
                 \"ref\": \"master\",
                 \"inputs\": $(echo $JSON_INPUTS | jq --arg id \"$TRIGGER_ID\" '. + {trigger_id: $id}')
               }"
-
-            echo "$WORKFLOW_FILE:$TRIGGER_ID" >> triggered.txt
+          
             sleep 5
           done < workflow-inputs.txt
 
+
       - name: Wait for specific workflow to complete
         run: |
-          TARGET_WORKFLOW="build%20and%20push%20app.yaml"
-          TRIGGER_ID=$(grep "$TARGET_WORKFLOW" triggered.txt | cut -d':' -f2)
-
-          echo "Waiting for run of $TARGET_WORKFLOW with trigger_id=$TRIGGER_ID"
-          for attempt in {1..10}; do
-            RUN_ID=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$TARGET_WORKFLOW/runs?branch=master&event=workflow_dispatch" \
-              | jq -r --arg id "$TRIGGER_ID" '.workflow_runs[] | select(.head_commit.message | contains($id)) | .id' | head -n 1)
-
-            if [[ -n "$RUN_ID" ]]; then
-              echo "Found run ID: $RUN_ID"
-              break
-            fi
-            echo "Retrying in 5s..."
-            sleep 5
-          done
-
-          STATUS=""
-          while [[ "$STATUS" != "completed" ]]; do
-            STATUS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+          while IFS=, read -r WORKFLOW_FILE TRIGGER_ID; do
+            echo "Waiting for $WORKFLOW_FILE with trigger_id=$TRIGGER_ID"
+          
+            for attempt in {1..10}; do
+              RUN_ID=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$WORKFLOW_FILE/runs?branch=master&event=workflow_dispatch" \
+                | jq -r --arg id "$TRIGGER_ID" '.workflow_runs[] | select(.head_commit.message | contains($id)) | .id' | head -n 1)
+          
+              if [[ -n "$RUN_ID" ]]; then
+                echo "Found run ID: $RUN_ID"
+                break
+              fi
+              echo "Retrying in 5s..."
+              sleep 5
+            done
+          
+            STATUS=""
+            while [[ "$STATUS" != "completed" ]]; do
+              STATUS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+                | jq -r '.status')
+              echo "Status: $STATUS"
+              sleep 10
+            done
+          
+            CONCLUSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
-              | jq -r '.status')
-            echo "Current status: $STATUS"
-            sleep 10
-          done
+              | jq -r '.conclusion')
+          
+            echo "$WORKFLOW_FILE completed with: $CONCLUSION"
+            if [[ "$CONCLUSION" != "success" ]]; then
+              echo "❌ $WORKFLOW_FILE failed."
+              exit 1
+            fi
+          done < <(tail -n +2 triggered.txt)
 
-          CONCLUSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
-            | jq -r '.conclusion')
-
-          echo "Workflow completed with conclusion: $CONCLUSION"
-          if [[ "$CONCLUSION" != "success" ]]; then
-            echo "❌ Triggered workflow failed."
-            exit 1
-          else
-            echo "✅ Triggered workflow successfully completed."
-          fi
