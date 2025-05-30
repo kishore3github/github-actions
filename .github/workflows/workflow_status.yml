@@ -1,0 +1,23 @@
+name: Automation pipeline
+
+on:
+  push:
+    paths:
+      .github/workflows/workflow_status.yml
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+    steps:
+      - name: check workflow status
+        run: |
+          curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$WORKFLOW_ID/runs?branch=master&event=workflow_dispatch"
