@@ -1,1 +1,1 @@
-build and push app.yaml language=java version=17 distribution=adopt
+build%20and%20push%20app.yaml language=java version=17 distribution=adopt
