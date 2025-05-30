@@ -99,7 +99,7 @@ jobs:
             # DISPATCH_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
             
             # Get current UTC time and subtract 1 minute
-            DISPATCH_TIME=$(date -u -d '1 minute ago' +"%Y-%m-%dT%H:%M:%SZ")
+            DISPATCH_TIME=$(date -u -d '5 minute ago' +"%Y-%m-%dT%H:%M:%SZ")
             echo "Looking for workflow runs after: $DISPATCH_TIME"
 
       
