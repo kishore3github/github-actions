@@ -19,13 +19,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      language: ${{ github.event.inputs.language }}
+      version: ${{ github.event.inputs.version }}
+      distribution: ${{ github.event.inputs.distribution }}
     steps:
-      - name: Trigger workflow
-        env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          language: ${{ github.event.inputs.language }}
-          version: ${{ github.event.inputs.version }}
-          distribution: ${{ github.event.inputs.distribution }}
+      - name: Trigger workflow 
         run: |
           curl -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -44,4 +44,53 @@ jobs:
                   distribution: $distribution
                 }
               }')"
-      
+          echo "workflow triggered successfully"
+
+      - name: Wait for workflow run to start
+        id: get-run-id
+        run: |
+          echo "Waiting for workflow run to appear..."
+          sleep 10
+          RUN_ID=""
+          for i in {1..10}; do
+            RUN_ID=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/build%20and%20push%20app.yaml/runs?branch=master&event=workflow_dispatch" \
+              | jq '.workflow_runs[0].id')
+            if [ "$RUN_ID" != "null" ] && [ -n "$RUN_ID" ]; then
+              echo "Found run ID: $RUN_ID"
+              echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+              break
+            fi
+            echo "Retrying in 5s..."
+            sleep 5
+          done
+
+      - name: Wait for workflow to complete
+        id: wait
+        run: |
+          echo "Polling workflow run status..."
+          STATUS=""
+          while [[ "$STATUS" != "completed" ]]; do
+            STATUS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+              | jq -r '.status')
+            echo "Current status: $STATUS"
+            sleep 10
+          done
+
+      - name: Get final result
+        run: |
+          CONCLUSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+            | jq -r '.conclusion')
+          echo "Workflow completed with conclusion: $CONCLUSION"
+
+          if [[ "$CONCLUSION" != "success" ]]; then
+            echo "❌ Triggered workflow failed."
+            exit 1
+          else
+            echo "✅ Triggered workflow successfully completed."
+          fi
