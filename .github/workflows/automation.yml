@@ -25,17 +25,23 @@ jobs:
           GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           language: ${{ github.event.inputs.language }}
           version: ${{ github.event.inputs.version }}
-          distribution: ${{ github.event.inputs.distribution }}  
+          distribution: ${{ github.event.inputs.distribution }}
         run: |
           curl -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/build%20and%20push%20app.yaml/dispatches \
-            -d '{
-              "ref": "master",
-              "inputs": {
-                "language": $language,
-                "version": $version,
-                "distribution": "$distribution"
-              }
-            }'
+            -d "$(jq -n \
+              --arg ref "master" \
+              --arg language "$language" \
+              --arg version "$version" \
+              --arg distribution "$distribution" \
+              '{
+                ref: $ref,
+                inputs: {
+                  language: $language,
+                  version: $version,
+                  distribution: $distribution
+                }
+              }')"
+      
