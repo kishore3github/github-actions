@@ -100,7 +100,7 @@ jobs:
             
             # Get current UTC time and subtract 1 minute
             DISPATCH_TIME=$(date -u -d '1 minute ago' +"%Y-%m-%dT%H:%M:%SZ")
-            echo "Looking for workflow runs after: $DISPATCH_TIME
+            echo "Looking for workflow runs after: $DISPATCH_TIME"
 
       
             # echo "Looking for workflow run after $DISPATCH_TIME"
