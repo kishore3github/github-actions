@@ -1,0 +1,109 @@
+name: Automation pipeline
+
+on:
+  workflow_dispatch:
+    inputs: 
+      language:
+        required: true
+        type: string
+        default: java
+      version:
+        required: true
+        type: string
+        default: 17
+      distribution:
+        required: true
+        type: string
+        default: adopt
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      language: ${{ github.event.inputs.language }}
+      version: ${{ github.event.inputs.version }}
+      distribution: ${{ github.event.inputs.distribution }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Trigger workflows from file
+        run: |
+          while IFS= read -r line; do
+            echo "Processing: $line"
+            WORKFLOW_FILE=$(echo "$line" | awk '{print $1}')
+            INPUTS=$(echo "$line" | cut -d' ' -f2-)
+
+            JSON_INPUTS="{"
+            for pair in $INPUTS; do
+              KEY=$(echo $pair | cut -d'=' -f1)
+              VALUE=$(echo $pair | cut -d'=' -f2)
+              JSON_INPUTS+="\"$KEY\":\"$VALUE\","
+            done
+            JSON_INPUTS=${JSON_INPUTS%,}
+            JSON_INPUTS+="}"
+
+            TRIGGER_ID="trigger-$(date +%s%N)"
+            echo "Triggering $WORKFLOW_FILE with inputs: $JSON_INPUTS"
+
+            curl -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/${WORKFLOW_FILE}/dispatches \
+              -d "{
+                \"ref\": \"master\",
+                \"inputs\": $(echo $JSON_INPUTS | jq --arg id \"$TRIGGER_ID\" '. + {trigger_id: $id}')
+              }"
+
+            echo "$WORKFLOW_FILE:$TRIGGER_ID" >> triggered.txt
+            sleep 5
+          done < workflow-inputs.txt
+
+      - name: Wait for specific workflow to complete
+        run: |
+          TARGET_WORKFLOW="build and push app.yaml"
+          TRIGGER_ID=$(grep "$TARGET_WORKFLOW" triggered.txt | cut -d':' -f2)
+
+          echo "Waiting for run of $TARGET_WORKFLOW with trigger_id=$TRIGGER_ID"
+          for attempt in {1..10}; do
+            RUN_ID=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$TARGET_WORKFLOW/runs?branch=master&event=workflow_dispatch" \
+              | jq -r --arg id "$TRIGGER_ID" '.workflow_runs[] | select(.head_commit.message | contains($id)) | .id' | head -n 1)
+
+            if [[ -n "$RUN_ID" ]]; then
+              echo "Found run ID: $RUN_ID"
+              break
+            fi
+            echo "Retrying in 5s..."
+            sleep 5
+          done
+
+          STATUS=""
+          while [[ "$STATUS" != "completed" ]]; do
+            STATUS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+              | jq -r '.status')
+            echo "Current status: $STATUS"
+            sleep 10
+          done
+
+          CONCLUSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+            | jq -r '.conclusion')
+
+          echo "Workflow completed with conclusion: $CONCLUSION"
+          if [[ "$CONCLUSION" != "success" ]]; then
+            echo "❌ Triggered workflow failed."
+            exit 1
+          else
+            echo "✅ Triggered workflow successfully completed."
+          fi
