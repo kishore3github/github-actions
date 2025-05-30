@@ -95,27 +95,34 @@ jobs:
               exit 1
             fi
       
+            # Record the time just before polling starts
+            DISPATCH_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+      
+            echo "Looking for workflow run after $DISPATCH_TIME"
+      
             for attempt in {1..20}; do
               RUNS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
                 "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$WORKFLOW_ID/runs?branch=master&event=workflow_dispatch")
       
-              for run_id in $(echo "$RUNS" | jq -r '.workflow_runs[].id'); do
-                INPUTS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
-                  -H "Accept: application/vnd.github+json" \
-                  "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$run_id")
+              RUN_ID=$(echo "$RUNS" | jq -r --arg time "$DISPATCH_TIME" '
+                .workflow_runs[] 
+                | select(.created_at > $time) 
+                | .id' | head -n 1)
       
-                FOUND_ID=$(echo "$INPUTS" | jq -r '.inputs.trigger_id')
-                if [[ "$FOUND_ID" == "$TRIGGER_ID" ]]; then
-                  RUN_ID=$run_id
-                  echo "Found run ID: $RUN_ID"
-                  break 2
-                fi
-              done
+              if [[ -n "$RUN_ID" ]]; then
+                echo "Found run ID: $RUN_ID"
+                break
+              fi
       
               echo "Retrying in 5s..."
               sleep 5
             done
+      
+            if [[ -z "$RUN_ID" ]]; then
+              echo "❌ No matching workflow run found for $WORKFLOW_FILE"
+              exit 1
+            fi
       
             STATUS=""
             while [[ "$STATUS" != "completed" ]]; do
@@ -138,4 +145,3 @@ jobs:
               exit 1
             fi
           done < <(tail -n +2 triggered.txt)
-      
