@@ -3,21 +3,20 @@ name: Automation pipeline
 on:
   workflow_dispatch:
     inputs: 
-      imput:
+      input:
         required: true
         type: string
 
-
 jobs:
-   deploy:
-     runs-on: ubuntu-latest
-     steps:
-       - name: trigger workflow   
-         env:
-           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-         run: |
-           curl -X POST \
-            -H "Authorization: $GH_TOKEN" \
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/build%20and%20push%20app.yaml/dispatches \
             -d '{
@@ -28,4 +27,3 @@ jobs:
                 "distribution": "adopt"
               }
             }'
-
