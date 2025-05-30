@@ -3,7 +3,7 @@ name: Automation pipeline
 on:
   push:
     paths:
-      .github/workflows/workflow_status.yml
+      - '.github/workflows/workflow_status.yml'
 
 permissions:
   contents: read
