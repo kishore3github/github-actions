@@ -79,4 +79,40 @@ jobs:
                 "https://api.github.com/repos/kishore3github/gradle-example/actions/workflows/$WORKFLOW_FILE/runs?branch=master&event=workflow_dispatch")
 
               for run_id in $(echo "$RUNS" | jq -r '.workflow_runs[].id'); do
-                INPUTS=$(curl -s
+                INPUTS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                  -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$run_id")
+
+                FOUND_ID=$(echo "$INPUTS" | jq -r '.inputs.trigger_id')
+                if [[ "$FOUND_ID" == "$TRIGGER_ID" ]]; then
+                  RUN_ID=$run_id
+                  echo "Found run ID: $RUN_ID"
+                  break 2
+                fi
+              done
+
+              echo "Retrying in 5s..."
+              sleep 5
+            done
+
+            STATUS=""
+            while [[ "$STATUS" != "completed" ]]; do
+              STATUS=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+                | jq -r '.status')
+              echo "Status: $STATUS"
+              sleep 10
+            done
+
+            CONCLUSION=$(curl -s -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/kishore3github/gradle-example/actions/runs/$RUN_ID" \
+              | jq -r '.conclusion')
+
+            echo "$WORKFLOW_FILE completed with: $CONCLUSION"
+            if [[ "$CONCLUSION" != "success" ]]; then
+              echo "❌ $WORKFLOW_FILE failed."
+              exit 1
+            fi
+          done < <(tail -n +2 triggered.txt)
