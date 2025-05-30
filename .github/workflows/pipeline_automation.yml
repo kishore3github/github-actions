@@ -68,7 +68,7 @@ jobs:
 
       - name: Wait for specific workflow to complete
         run: |
-          TARGET_WORKFLOW="build and push app.yaml"
+          TARGET_WORKFLOW="build%20and%20push%20app.yaml"
           TRIGGER_ID=$(grep "$TARGET_WORKFLOW" triggered.txt | cut -d':' -f2)
 
           echo "Waiting for run of $TARGET_WORKFLOW with trigger_id=$TRIGGER_ID"
