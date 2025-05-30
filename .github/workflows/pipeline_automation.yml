@@ -2,6 +2,8 @@ name: Automation pipeline
 
 on:
   push:
+    paths:
+      - '.github/workflows/pipeline_automation.yml'
   workflow_dispatch:
     inputs: 
       language:
