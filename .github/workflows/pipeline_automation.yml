@@ -39,7 +39,7 @@ jobs:
 
       - name: Trigger workflows from file
         run: |
-          echo "workflow_file,trigger_id" > triggered.txt
+          # echo "workflow_file,trigger_id" > triggered.txt
           while IFS= read -r line; do
             WORKFLOW_FILE=$(echo "$line" | awk '{print $1}' | tr -d '"')
             INPUTS=$(echo "$line" | cut -d' ' -f2-)
