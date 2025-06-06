@@ -17,7 +17,7 @@ jobs:
       - name: Read versions.txt and create matrix
         id: set-matrix
         run: |
-          matrix=$(awk -F= '{printf "{\"service\":\"%s\",\"version\":\"%s\",\"env\":\"%s\"},", $1, $2, $3}' version.txt | sed 's/,$//')
+          matrix=$(awk -F=' ' '{printf "{\"service\":\"%s\",\"version\":\"%s\",\"env\":\"%s\"},", $1, $2, $3}' version.txt | sed 's/,$//')
           echo "matrix={\"include\":[${matrix}]}" >> $GITHUB_OUTPUT
 
 
