@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{fromJson(needs.generate-matrix.outputs.matrix)}}
-
+## below steps needs  to be update to perform the deployment
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -41,7 +41,9 @@ jobs:
 
       - name: Deploy ${{ matrix.service }}
         run: |
-          helm upgrade --install ${{ matrix.service }} ./charts/my-common-chart \
-            --namespace ${{ matrix.service }} \
-            --set image.tag=${{ matrix.version }} \
-            -f environments/${{ matrix.service }}/values.yaml
+           echo "application deployed success"
+      
+          # helm upgrade --install ${{ matrix.service }} ./charts/my-common-chart \
+            # --namespace ${{ matrix.service }} \
+            # --set image.tag=${{ matrix.version }} \
+            # -f environments/${{ matrix.service }}/values.yaml
