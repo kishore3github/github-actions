@@ -1,2 +1,2 @@
-build_and_push_app.yaml language=java version=17 distribution=adopt
+build_and_push_app.yaml language=java version=11 distribution=adopt
 code_scanning.yaml language=java version=17 distribution=adopt
