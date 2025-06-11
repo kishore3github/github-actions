@@ -77,13 +77,22 @@ jobs:
             image_tag=$(echo $service | jq -r '.image_tag')
 
             echo "Triggering deployment for $name in namespace $namespace with image tag $image_tag"
-            run_id=$(gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag" --json id -q .id)
+            gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
 
             echo "Waiting for deployment of $name to complete..."
+            # Wait a few seconds to ensure the workflow is registered
+            sleep 20
+
+            # Get the latest run ID for the workflow
+            run_id=$(gh run list --workflow=deploy-service.yaml --limit=1 --json databaseId --jq '.[0].databaseId')
+
+            # Wait for that run to complete
             gh run watch "$run_id"
+
             echo "Deployment of $name completed."
             sleep 10
           done
+
 
           # echo "Deploying services sequentially"
           # echo "$MATRIX" | jq -c '.[]' | while read service; do
