@@ -1,0 +1,10 @@
+deployments:
+  - name: my-service
+    namespace: my-namespace
+    image_tag: latest
+  - name: my-service
+    namespace: my-namespace
+    image_tag: latest
+  - name: my-service
+    namespace: my-namespace
+    image_tag: latest

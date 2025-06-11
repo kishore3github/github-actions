@@ -1,0 +1,66 @@
+name: Service Deployment controller
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: 
+    inputs:
+      mode:
+        description: 'Mode of operation'
+        required: true
+        default: 'sequential'
+        type: choice
+        options:
+          - sequential
+          - parallel
+
+jobs:
+  read-services: 
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.read.outputs.matrix }}
+    steps:
+      - name: checkout 
+        uses: actions/checkout@v3
+      
+      - name: Read services
+        id: read
+        run: |
+          echo "Reading services from services.yaml"
+          matrix=$(yq -o=json '.deployments' services.yaml)
+          echo "services=$matrix" >> $GITHUB_ENV
+
+  deployments:
+    needs: read-services
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'parallel' }}
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.read-services.outputs.matrix) }}
+    steps:
+      - name: Deploy service
+        uses: ./github/actions/deploy-service
+        with:
+          service: ${{ matrix.service.name }}
+          namespace: ${{ matrix.service.namespace }}
+          image_tag: ${{ matrix.service.image_tag }}
+      - name: Notify deployment
+        run: |
+          echo "Deployment of ${{ matrix.service.name }} in namespace ${{ matrix.service.namespace }} with image tag ${{ matrix.service.image_tag }} completed."
+
+  deployments-sequential:
+    needs: read-services
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.mode == 'sequential' }}
+    steps:
+      - name: Deploy services sequentially
+        run: |
+          echo "Deploying services sequentially"
+          for service in $(echo "${{ needs.read-services.outputs.services }}" | jq -c '.[]'); do
+            name=$(echo $service | jq -r '.name')
+            namespace=$(echo $service | jq -r '.namespace')
+            image_tag=$(echo $service | jq -r '.image_tag')
+            echo "Deploying $name in namespace $namespace with image tag $image_tag"
+            # Call the deploy-service action here
+            # ./github/actions/deploy-service --service "$name" --namespace "$namespace" --image-tag "$image_tag"
+          done
