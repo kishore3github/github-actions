@@ -18,7 +18,7 @@ jobs:
   read-services: 
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.read.outputs.matrix }}
+      matrix: ${{ steps.read.outputs.matrix }}
     steps:
       - name: checkout 
         uses: actions/checkout@v3
@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "Reading services from services.yaml"
           matrix=$(yq -o=json '.deployments' services.yaml)
-          echo "services=$matrix" >> $GITHUB_OUTPUT
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
   deployments:
     needs: read-services
@@ -57,11 +57,11 @@ jobs:
       - name: Deploy services sequentially
         run: |
           echo "Deploying services sequentially"
-          for service in $(echo "${{ needs.read-services.outputs.services }}" | jq -c '.[]'); do
+          for service in $(echo "${{ needs.read-services.outputs.matrix }}" | jq -c '.[]'); do
             name=$(echo $service | jq -r '.name')
             namespace=$(echo $service | jq -r '.namespace')
             image_tag=$(echo $service | jq -r '.image_tag')
             echo "Deploying $name in namespace $namespace with image tag $image_tag"
-            Call the deploy-service action here
+            # Call the deploy-service action here
             gh workflow run ./github/actions/deploy-service.yaml --service "$name" --namespace "$namespace" --image-tag "$image_tag"
           done
