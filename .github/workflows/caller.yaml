@@ -64,7 +64,7 @@ jobs:
     steps:
       - name: Deploy services sequentially
         run: |
-          matrix='$(echo ${{ fromJson(needs.read-services.outputs.matrix) }}'
+          matrix=$(echo '${{ needs.read-services.outputs.matrix }}')
           echo "$matrix" | jq -c '.[]' | while read service; do
             name=$(echo $service | jq -r '.name')
             namespace=$(echo $service | jq -r '.namespace')
