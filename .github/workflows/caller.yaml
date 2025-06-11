@@ -37,6 +37,9 @@ jobs:
           echo "Reading services from services.yaml"
           matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          
+          mode=$(yq -r '.mode' services.yaml)
+          echo "mode=$mode" >> $GITHUB_OUTPUT
           echo "$matrix"
 
   deployments-parallel:

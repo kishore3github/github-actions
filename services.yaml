@@ -1,3 +1,4 @@
+mode: sequential
 deployments:
   - name: my-service
     namespace: my-namespace
