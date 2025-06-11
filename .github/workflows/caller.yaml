@@ -2,9 +2,9 @@
 name: Service Deployment Controller
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
   workflow_dispatch:
     inputs:
       mode:
@@ -49,6 +49,8 @@ jobs:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Call reusable deploy-service workflow
         uses: ./.github/workflows/deploy-service.yaml
         with:
