@@ -75,8 +75,23 @@ jobs:
             name=$(echo $service | jq -r '.name')
             namespace=$(echo $service | jq -r '.namespace')
             image_tag=$(echo $service | jq -r '.image_tag')
-            echo "Deploying $name in namespace $namespace with image tag $image_tag"
-            gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
-            echo "Deployment of $name in namespace $namespace with image tag $image_tag completed."
-            sleep 100
+
+            echo "Triggering deployment for $name in namespace $namespace with image tag $image_tag"
+            run_id=$(gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag" --json id -q .id)
+
+            echo "Waiting for deployment of $name to complete..."
+            gh run watch "$run_id"
+            echo "Deployment of $name completed."
+            sleep 10
           done
+
+          # echo "Deploying services sequentially"
+          # echo "$MATRIX" | jq -c '.[]' | while read service; do
+          #   name=$(echo $service | jq -r '.name')
+          #   namespace=$(echo $service | jq -r '.namespace')
+          #   image_tag=$(echo $service | jq -r '.image_tag')
+          #   echo "Deploying $name in namespace $namespace with image tag $image_tag"
+          #   gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
+          #   echo "Deployment of $name in namespace $namespace with image tag $image_tag completed."
+          #   sleep 100
+          # done
