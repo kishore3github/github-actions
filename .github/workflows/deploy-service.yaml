@@ -5,17 +5,35 @@ on:
   #   paths:
   #     - '.github/workflows/pipeline_automation.yml'
   workflow_dispatch:
-  workflow_call:
     inputs: 
       service:
+        description: 'Name of the service to deploy'
         required: true
         type: string
         default: java
       namespace:
+        description: 'Kubernetes namespace for deployment'
+        required: true
+        type: string
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+        default: adopt
+  workflow_call:
+    inputs:
+      service:
+        description: 'Name of the service to deploy'
+        required: true
+        type: string
+        default: java
+      namespace:
+        description: 'Kubernetes namespace for deployment'
         required: true
         type: string
         default: 17
       image_tag:
+        description: 'Docker image tag to deploy'
         required: true
         type: string
         default: adopt
