@@ -1,9 +1,11 @@
-name: Service Deployment controller
+# .github/workflows/main.yaml
+name: Service Deployment Controller
+
 on:
   push:
     branches:
       - main
-  workflow_dispatch: 
+  workflow_dispatch:
     inputs:
       mode:
         description: 'Mode of operation'
@@ -15,53 +17,51 @@ on:
           - parallel
 
 jobs:
-  read-services: 
+  read-services:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
     steps:
-      - name: checkout 
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Install yq and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y yq jq
-      
+          sudo apt-get install -y jq
+          sudo snap install yq
+
       - name: Read services
         id: read
         run: |
           echo "Reading services from services.yaml"
           matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "$matrix"
 
-          echo $matrix
-
-
-  deployments:
+  deployments-parallel:
     needs: read-services
-    runs-on: ubuntu-latest
     if: ${{ github.event.inputs.mode == 'parallel' }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
     steps:
-      - name: Deploy service
-        uses: ./github/workflows/deploy-service.yaml
+      - name: Call reusable deploy-service workflow
+        uses: ./.github/workflows/deploy-service.yaml
         with:
           service: ${{ matrix.service.name }}
           namespace: ${{ matrix.service.namespace }}
           image_tag: ${{ matrix.service.image_tag }}
 
-      - name: Notify deployment
-        run: |
-          echo "Deployment of ${{ matrix.service.name }} in namespace ${{ matrix.service.namespace }} with image tag ${{ matrix.service.image_tag }} completed."
-
   deployments-sequential:
     needs: read-services
-    runs-on: ubuntu-latest
     if: ${{ github.event.inputs.mode == 'sequential' }}
+    runs-on: ubuntu-latest
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Deploy services sequentially
         env:
           MATRIX: ${{ needs.read-services.outputs.matrix }}
