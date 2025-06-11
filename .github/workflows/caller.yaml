@@ -48,7 +48,7 @@ jobs:
     strategy:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
-    uses: kishore3github/githubactions/.github/workflows/deploy-service.yaml@main
+    uses: kishore3github/github-actions/.github/workflows/deploy-service.yaml@main
     with:
       service: ${{ matrix.service.name }}
       namespace: ${{ matrix.service.namespace }}
