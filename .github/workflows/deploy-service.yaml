@@ -26,12 +26,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Deploy service
-        uses: ./github/actions/deploy-service
-        with:
-          service: ${{ github.event.inputs.service }}
-          namespace: ${{ github.event.inputs.namespace }}
-          image_tag: ${{ github.event.inputs.image_tag }}
+      # - name: Deploy service
+      #   uses: ./github/actions/deploy-service
+      #   with:
+      #     service: ${{ github.event.inputs.service }}
+      #     namespace: ${{ github.event.inputs.namespace }}
+      #     image_tag: ${{ github.event.inputs.image_tag }}
 
       - name: Notify deployment
         run: |

@@ -78,5 +78,5 @@ jobs:
             echo "Deploying $name in namespace $namespace with image tag $image_tag"
             gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
             echo "Deployment of $name in namespace $namespace with image tag $image_tag completed."
-            sleep 10
+            sleep 100
           done
