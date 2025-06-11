@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "Reading services from services.yaml"
           matrix=$(yq -o=json '.deployments' services.yaml)
-          echo "services=$matrix" >> $GITHUB_ENV
+          echo "services=$matrix" >> $GITHUB_OUTPUT
 
   deployments:
     needs: read-services
@@ -39,11 +39,12 @@ jobs:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
     steps:
       - name: Deploy service
-        uses: ./github/actions/deploy-service
+        uses: ./github/actions/deploy-service.yaml
         with:
           service: ${{ matrix.service.name }}
           namespace: ${{ matrix.service.namespace }}
           image_tag: ${{ matrix.service.image_tag }}
+
       - name: Notify deployment
         run: |
           echo "Deployment of ${{ matrix.service.name }} in namespace ${{ matrix.service.namespace }} with image tag ${{ matrix.service.image_tag }} completed."
@@ -61,6 +62,6 @@ jobs:
             namespace=$(echo $service | jq -r '.namespace')
             image_tag=$(echo $service | jq -r '.image_tag')
             echo "Deploying $name in namespace $namespace with image tag $image_tag"
-            # Call the deploy-service action here
-            # ./github/actions/deploy-service --service "$name" --namespace "$namespace" --image-tag "$image_tag"
+            Call the deploy-service action here
+            gh workflow run ./github/actions/deploy-service.yaml --service "$name" --namespace "$namespace" --image-tag "$image_tag"
           done
