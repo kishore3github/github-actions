@@ -43,6 +43,8 @@ jobs:
     needs: read-services
     if: ${{ github.event.inputs.mode == 'parallel' }}
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
