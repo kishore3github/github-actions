@@ -22,13 +22,19 @@ jobs:
     steps:
       - name: checkout 
         uses: actions/checkout@v3
+
+      - name: Install yq and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yq jq
       
       - name: Read services
         id: read
         run: |
           echo "Reading services from services.yaml"
-          matrix=$(yq -o=json '.deployments' services.yaml)
+          matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
 
   deployments:
     needs: read-services
