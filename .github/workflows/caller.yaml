@@ -65,6 +65,7 @@ jobs:
       - name: Deploy services sequentially
         env:
           MATRIX: ${{ needs.read-services.outputs.matrix }}
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           echo "Deploying services sequentially"
           echo "$MATRIX" | jq -c '.[]' | while read service; do
