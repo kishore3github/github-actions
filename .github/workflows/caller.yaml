@@ -35,6 +35,8 @@ jobs:
           matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
+          echo $matrix
+
 
   deployments:
     needs: read-services
@@ -62,12 +64,17 @@ jobs:
     steps:
       - name: Deploy services sequentially
         run: |
-          echo "Deploying services sequentially"
-          for service in $(echo "${{ needs.read-services.outputs.matrix }}" | jq -c '.[]'); do
+          matrix='$(echo ${{ fromJson(needs.read-services.outputs.matrix) }}'
+          echo "$matrix" | jq -c '.[]' | while read service; do
             name=$(echo $service | jq -r '.name')
             namespace=$(echo $service | jq -r '.namespace')
             image_tag=$(echo $service | jq -r '.image_tag')
+
             echo "Deploying $name in namespace $namespace with image tag $image_tag"
-            # Call the deploy-service action here
-            gh workflow run ./github/workflows/deploy-service.yaml --service "$name" --namespace "$namespace" --image-tag "$image_tag"
+            # Call the deployment script or action here
+            gh workflow run ./github/workflows/deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
+            # Example deployment command (replace with actual deployment logic) 
+
+            echo "Deployment of $name in namespace $namespace with image tag $image_tag completed."
+            sleep 10
           done
