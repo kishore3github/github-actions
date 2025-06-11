@@ -63,18 +63,16 @@ jobs:
     if: ${{ github.event.inputs.mode == 'sequential' }}
     steps:
       - name: Deploy services sequentially
+        env:
+          MATRIX: ${{ needs.read-services.outputs.matrix }}
         run: |
-          matrix=$(echo '${{ needs.read-services.outputs.matrix }}')
-          echo "$matrix" | jq -c '.[]' | while read service; do
+          echo "Deploying services sequentially"
+          echo "$MATRIX" | jq -c '.[]' | while read service; do
             name=$(echo $service | jq -r '.name')
             namespace=$(echo $service | jq -r '.namespace')
             image_tag=$(echo $service | jq -r '.image_tag')
-
             echo "Deploying $name in namespace $namespace with image tag $image_tag"
-            # Call the deployment script or action here
-            gh workflow run ./github/workflows/deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
-            # Example deployment command (replace with actual deployment logic) 
-
+            gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
             echo "Deployment of $name in namespace $namespace with image tag $image_tag completed."
             sleep 10
           done
