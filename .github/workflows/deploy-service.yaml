@@ -4,7 +4,7 @@ on:
   # push:
   #   paths:
   #     - '.github/workflows/pipeline_automation.yml'
-  workflow_call:
+  workflow_dispatch:
     inputs: 
       service:
         required: true
