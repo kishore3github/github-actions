@@ -41,22 +41,19 @@ jobs:
 
   deployments-parallel:
     needs: read-services
+    # runs-on: ubuntu-latest
     if: ${{ github.event.inputs.mode == 'parallel' }}
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+    # env:
+      # GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Call reusable deploy-service workflow
-        uses: .github/workflows/deploy-service.yaml
-        with:
-          service: ${{ matrix.service.name }}
-          namespace: ${{ matrix.service.namespace }}
-          image_tag: ${{ matrix.service.image_tag }}
+    uses: kishore3github/githubactions/.github/workflows/deploy-service.yaml@main
+    with:
+      service: ${{ matrix.service.name }}
+      namespace: ${{ matrix.service.namespace }}
+      image_tag: ${{ matrix.service.image_tag }}
+
 
   deployments-sequential:
     needs: read-services
