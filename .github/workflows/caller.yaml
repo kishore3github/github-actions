@@ -21,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
+      mode: ${{ steps.read.outputs.mode }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -37,14 +38,15 @@ jobs:
           echo "Reading services from services.yaml"
           matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
-          
+
           mode=$(yq -r '.mode' services.yaml)
           echo "mode=$mode" >> $GITHUB_OUTPUT
           echo "$matrix"
+          echo $mode
 
   deployments-parallel:
     needs: read-services
-    if: ${{ github.event.inputs.mode == 'parallel' }}
+    if: ${{ needs.read-services.outputs.mode == 'parallel' }}
     strategy:
       matrix:
         service: ${{ fromJson(needs.read-services.outputs.matrix) }}
@@ -58,7 +60,7 @@ jobs:
 
   deployments-sequential:
     needs: read-services
-    if: ${{ github.event.inputs.mode == 'sequential' }}
+    if: ${{ needs.read-services.outputs.mode == 'sequential' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
