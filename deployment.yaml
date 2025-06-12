@@ -1,0 +1,18 @@
+deployments:
+  - - name: serviceA
+      image: myrepo/serviceA:v1
+      namespace: dev
+    - name: serviceB
+      image: myrepo/serviceB:v1
+      namespace: dev
+ 
+  - - name: serviceC
+      image: myrepo/serviceC:v1
+      namespace: dev
+    - name: serviceD
+      image: myrepo/serviceD:v1
+      namespace: dev
+ 
+  - - name: serviceE
+      image: myrepo/serviceE:v1
+      namespace: dev

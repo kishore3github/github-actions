@@ -32,68 +32,123 @@ jobs:
           sudo apt-get install -y jq
           sudo snap install yq
 
-      - name: Read services
-        id: read
-        run: |
-          echo "Reading services from services.yaml"
-          matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
-
-          mode=$(yq -r '.mode' services.yaml)
-          echo "mode=$mode" >> $GITHUB_OUTPUT
-          echo "$matrix"
-          echo $mode
-
-  deployments-parallel:
-    needs: read-services
-    if: ${{ needs.read-services.outputs.mode == 'parallel' }}
-    strategy:
-      matrix:
-        service: ${{ fromJson(needs.read-services.outputs.matrix) }}
-    uses: kishore3github/github-actions/.github/workflows/deploy-service.yaml@main
-    with:
-      service: ${{ matrix.service.name }}
-      namespace: ${{ matrix.service.namespace }}
-      image_tag: ${{ matrix.service.image_tag }}
-
-
-
-  deployments-sequential:
-    needs: read-services
-    if: ${{ needs.read-services.outputs.mode == 'sequential' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Deploy services sequentially
+      - name: Read deployment.yaml and deploy sequentially
         env:
-          MATRIX: ${{ needs.read-services.outputs.matrix }}
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Deploying services sequentially"
-          echo "$MATRIX" | jq -c '.[]' | while read service; do
-            name=$(echo $service | jq -r '.name')
-            namespace=$(echo $service | jq -r '.namespace')
-            image_tag=$(echo $service | jq -r '.image_tag')
-
-            echo "Triggering deployment for $name in namespace $namespace with image tag $image_tag"
-            gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
-
-            echo "Waiting for deployment of $name to complete..."
-            # Wait a few seconds to ensure the workflow is registered
-            sleep 20
-
-            # Get the latest run ID for the workflow
-            run_id=$(gh run list --workflow=deploy-service.yaml --limit=1 --json databaseId --jq '.[0].databaseId')
-
-            # Wait for that run to complete
-            gh run watch "$run_id"
-
-            echo "Deployment of $name completed."
-            sleep 10
+          i=0
+          yq -o=json '.deployments' deployment.yaml | jq -c '.[]' | while read -r serviceGroup; do
+            echo "=== Deploying group $i in parallel ==="
+            run_ids=()
+      
+            # Trigger parallel workflows in this group
+            echo "$serviceGroup" | jq -c '.[]' | while read -r svc; do
+              name=$(echo "$svc" | jq -r '.name')
+              image=$(echo "$svc" | jq -r '.image')
+              ns=$(echo "$svc" | jq -r '.namespace')
+      
+              echo "Triggering $name"
+              gh workflow run reusable-deploy.yaml \
+                -f service="$name" \
+                -f image="$image" \
+                -f namespace="$ns"
+      
+              # Sleep a second to avoid same-timestamp runs (gh bug sometimes)
+              sleep 1
+      
+              # Get the latest run ID (safe because they're unique now)
+              run_id=$(gh run list --workflow=reusable-deploy.yaml --limit=1 --json databaseId -q '.[0].databaseId')
+              echo "Run ID for $name: $run_id"
+              run_ids+=($run_id)
+            done
+      
+            echo "Waiting for workflows to finish for group $i..."
+            for id in "${run_ids[@]}"; do
+              while true; do
+                status=$(gh run view "$id" --json status -q '.status')
+                conclusion=$(gh run view "$id" --json conclusion -q '.conclusion')
+                echo "Workflow $id status: $status / $conclusion"
+                
+                if [[ "$status" == "completed" ]]; then
+                  if [[ "$conclusion" == "success" ]]; then
+                    echo "✅ Run $id succeeded"
+                    break
+                  else
+                    echo "❌ Run $id failed or cancelled"
+                    exit 1
+                  fi
+                fi
+                sleep 10
+              done
+            done
+      
+            echo "✅ Group $i complete"
+            ((i+=1))
           done
+ 
+
+  #     - name: Read services
+  #       id: read
+  #       run: |
+  #         echo "Reading services from services.yaml"
+  #         matrix=$(yq -o=json '.deployments' services.yaml | jq -c)
+  #         echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+  #         mode=$(yq -r '.mode' services.yaml)
+  #         echo "mode=$mode" >> $GITHUB_OUTPUT
+  #         echo "$matrix"
+  #         echo $mode
+
+  # deployments-parallel:
+  #   needs: read-services
+  #   if: ${{ needs.read-services.outputs.mode == 'parallel' }}
+  #   strategy:
+  #     matrix:
+  #       service: ${{ fromJson(needs.read-services.outputs.matrix) }}
+  #   uses: kishore3github/github-actions/.github/workflows/deploy-service.yaml@main
+  #   with:
+  #     service: ${{ matrix.service.name }}
+  #     namespace: ${{ matrix.service.namespace }}
+  #     image_tag: ${{ matrix.service.image_tag }}
+
+
+
+  # deployments-sequential:
+  #   needs: read-services
+  #   if: ${{ needs.read-services.outputs.mode == 'sequential' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+
+  #     - name: Install jq
+  #       run: sudo apt-get update && sudo apt-get install -y jq
+
+  #     - name: Deploy services sequentially
+  #       env:
+  #         MATRIX: ${{ needs.read-services.outputs.matrix }}
+  #         GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  #       run: |
+  #         echo "Deploying services sequentially"
+  #         echo "$MATRIX" | jq -c '.[]' | while read service; do
+  #           name=$(echo $service | jq -r '.name')
+  #           namespace=$(echo $service | jq -r '.namespace')
+  #           image_tag=$(echo $service | jq -r '.image_tag')
+
+  #           echo "Triggering deployment for $name in namespace $namespace with image tag $image_tag"
+  #           gh workflow run deploy-service.yaml -f service="$name" -f namespace="$namespace" -f image_tag="$image_tag"
+
+  #           echo "Waiting for deployment of $name to complete..."
+  #           # Wait a few seconds to ensure the workflow is registered
+  #           sleep 20
+
+  #           # Get the latest run ID for the workflow
+  #           run_id=$(gh run list --workflow=deploy-service.yaml --limit=1 --json databaseId --jq '.[0].databaseId')
+
+  #           # Wait for that run to complete
+  #           gh run watch "$run_id"
+
+  #           echo "Deployment of $name completed."
+  #           sleep 10
+  #         done
 
