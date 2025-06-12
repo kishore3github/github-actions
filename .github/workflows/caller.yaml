@@ -57,7 +57,7 @@ jobs:
               sleep 1
       
               # Get the latest run ID (safe because they're unique now)
-              run_id=$(gh run list --workflow=reusable-deploy.yaml --limit=1 --json databaseId -q '.[0].databaseId')
+              run_id=$(gh run list --workflow=reusable.yaml --limit=1 --json databaseId -q '.[0].databaseId')
               echo "Run ID for $name: $run_id"
               run_ids+=($run_id)
             done
