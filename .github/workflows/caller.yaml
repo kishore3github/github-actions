@@ -34,7 +34,7 @@ jobs:
 
       - name: Read deployment.yaml and deploy sequentially
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
           i=0
           yq -o=json '.deployments' deployment.yaml | jq -c '.[]' | while read -r serviceGroup; do
