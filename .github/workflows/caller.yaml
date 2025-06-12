@@ -48,7 +48,7 @@ jobs:
               ns=$(echo "$svc" | jq -r '.namespace')
       
               echo "Triggering $name"
-              gh workflow run reusable-deploy.yaml \
+              gh workflow run reusable.yaml \
                 -f service="$name" \
                 -f image="$image" \
                 -f namespace="$ns"
